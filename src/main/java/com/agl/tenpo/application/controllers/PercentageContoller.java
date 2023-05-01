@@ -1,6 +1,7 @@
 package com.agl.tenpo.application.controllers;
 
 import com.agl.tenpo.application.services.PercentageService;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -18,7 +19,8 @@ public class PercentageContoller {
     }
 
     @GetMapping("/")
-    ResponseEntity<Integer> retrievePercentage(){
+    @Cacheable(value = "percentage")
+    public ResponseEntity<Integer> retrievePercentage(){
         return new ResponseEntity<>(percentageService.retrievePercentage(), HttpStatus.OK);
     }
 
