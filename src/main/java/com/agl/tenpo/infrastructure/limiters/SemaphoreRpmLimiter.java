@@ -4,28 +4,32 @@ import com.agl.tenpo.domain.limiters.RpmLimiter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
-import java.time.LocalDateTime;
-import java.time.temporal.ChronoUnit;
-import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.Semaphore;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 @Slf4j
 @Component
 public class SemaphoreRpmLimiter implements RpmLimiter {
-
-    private final Map<String, Semaphore> ipSemaphores;
-
-    public SemaphoreRpmLimiter() {
-        this.ipSemaphores = new ConcurrentHashMap<>();
-    }
+    private final ConcurrentHashMap<String, AtomicInteger> ipRequestCount = new ConcurrentHashMap<>();
+    private long startTime = System.currentTimeMillis();
 
     @Override
     public boolean allowRequest(String ipAddress) throws InterruptedException {
-        log.info("date-time {}, validating requests per seconds for the ip {}", LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS), ipAddress);
-        Semaphore semaphore = ipSemaphores.computeIfAbsent(ipAddress, ip -> new Semaphore(3, true));
-        return semaphore.tryAcquire(1, 1, TimeUnit.MINUTES);
-    }
+        long currentTime = System.currentTimeMillis();
+        long elapsedTime = currentTime - startTime;
 
+        if (elapsedTime >= 60000) { // 60 segundos en milisegundos
+            startTime = currentTime;
+            ipRequestCount.clear();
+        }
+
+        AtomicInteger requestCount = ipRequestCount.get(ipAddress);
+        if (requestCount == null) {
+            requestCount = new AtomicInteger(0);
+            ipRequestCount.put(ipAddress, requestCount);
+        }
+
+        requestCount.incrementAndGet();
+        return requestCount.get() <= 3;
+    }
 }
