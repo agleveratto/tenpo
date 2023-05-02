@@ -19,7 +19,7 @@ public class PercentageServiceImpl implements PercentageService {
         return (int) (Math.random()*100+1);
     }
 
-    @Scheduled(fixedRate = 5000)
+    @Scheduled(fixedRate = 1800000)
     @CacheEvict(allEntries = true)
     public void clearCache(){
         log.info("clearing cache");

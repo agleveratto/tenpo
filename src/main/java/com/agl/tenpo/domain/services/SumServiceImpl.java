@@ -39,27 +39,27 @@ public class SumServiceImpl implements SumService {
 
     @Override
     public double sum(int numberOne, int numberTwo) {
-        String localDateTime = LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS).format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
-        int percentage = getExternalPercentage();
+        var localDateTime = LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS).format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
+        var percentage = getExternalPercentage();
         log.info("percentage getted {}", percentage);
-        int sum = numberOne + numberTwo;
-        double result = sum + ((double) (percentage * sum) / 100);
+        var sum = numberOne + numberTwo;
+        var result = sum + ((double) (percentage * sum) / 100);
         saveData(localDateTime, percentage, numberOne, numberTwo, result);
         return result;
     }
 
     @Retryable()
     public Integer getExternalPercentage() {
-        log.info("getting percentage from external service");
-        Integer externalPercentage = restTemplate.getForObject(PERCENTAGE_SERVICE_URL, Integer.class);
+        log.info("getting percentage from external service {}", PERCENTAGE_SERVICE_URL);
+        var externalPercentage = restTemplate.getForObject(PERCENTAGE_SERVICE_URL, Integer.class);
         redisTemplate.opsForValue().set(PERCENTAGE_KEY, externalPercentage);
-        redisTemplate.expire(PERCENTAGE_KEY, 1, TimeUnit.MINUTES);
+        redisTemplate.expire(PERCENTAGE_KEY,30, TimeUnit.MINUTES);
         return externalPercentage;
     }
 
     @Recover
     public Integer getCachedPercentage(){
-        Integer cachedPercentage = redisTemplate.opsForValue().get(PERCENTAGE_KEY);
+        var cachedPercentage = redisTemplate.opsForValue().get(PERCENTAGE_KEY);
         if (cachedPercentage == null) {
             throw new PercentageCachedNotFoundException();
         }
@@ -69,7 +69,7 @@ public class SumServiceImpl implements SumService {
     @Async
     void saveData(String localDateTime, int percentage, int numberOne, int numberTwo, Double result){
         log.info("save data into historyApi");
-        HistoryApi historyApi = HistoryApi.builder()
+        var historyApi = HistoryApi.builder()
                 .executedDate(localDateTime)
                 .num1(numberOne)
                 .num2(numberTwo)
@@ -77,7 +77,7 @@ public class SumServiceImpl implements SumService {
                 .result(result)
                 .statusCode(HttpStatus.CREATED.value())
                 .build();
-        new RestTemplate().postForEntity(HISTORY_SERVICE_URL, historyApi, HistoryApi.class);
+        restTemplate.postForEntity(HISTORY_SERVICE_URL, historyApi, HistoryApi.class);
     }
 
 }

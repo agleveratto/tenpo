@@ -63,7 +63,7 @@ class SumControllerTest {
                 .andExpect(status().isNotFound())
                 .andReturn();
 
-        HashMap resultMapped = new ObjectMapper().readValue(result.getResponse().getContentAsString(), HashMap.class);
+        var resultMapped = new ObjectMapper().readValue(result.getResponse().getContentAsString(), HashMap.class);
         assertThat(resultMapped.get("message")).isEqualTo("Percentage not found into cache");
 
         verify(semaphoreRpmLimiter).allowRequest("127.0.0.1");
@@ -81,7 +81,7 @@ class SumControllerTest {
                 .andExpect(status().isInternalServerError())
                 .andReturn();
 
-        HashMap resultMapped = new ObjectMapper().readValue(result.getResponse().getContentAsString(), HashMap.class);
+        var resultMapped = new ObjectMapper().readValue(result.getResponse().getContentAsString(), HashMap.class);
         assertThat(resultMapped.get("message")).isEqualTo("Internal Server Error");
 
         verify(semaphoreRpmLimiter).allowRequest("127.0.0.1");
