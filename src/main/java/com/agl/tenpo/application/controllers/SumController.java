@@ -2,6 +2,11 @@ package com.agl.tenpo.application.controllers;
 
 import com.agl.tenpo.application.services.SumService;
 import com.agl.tenpo.infrastructure.limiters.SemaphoreRpmLimiter;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -23,8 +28,23 @@ public class SumController {
         this.semaphoreRpmLimiter = semaphoreRpmLimiter;
     }
 
+    @Operation(summary = "Sum two numbers and an external percentage value")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200",
+                    description = "Result of the sum",
+                    content = {@Content(mediaType = "application/json",
+                            schema = @Schema(implementation = Double.class))}),
+            @ApiResponse(responseCode = "404",
+                    description = "Percentage not exists into cache",
+                    content = {@Content(mediaType = "application/json",
+                            schema = @Schema(implementation = ResponseEntity.class))}),
+            @ApiResponse(responseCode = "500",
+                    description = "Internal Server Error to get external percentage",
+                    content = {@Content(mediaType = "application/json",
+                            schema = @Schema(implementation = ResponseEntity.class))})
+    })
     @GetMapping("/sum/{numberOne}/{numberTwo}")
-    public ResponseEntity<Object> sumWithPercentage(@PathVariable int numberOne, @PathVariable int numberTwo,
+    public ResponseEntity<Double> sumWithPercentage(@PathVariable int numberOne, @PathVariable int numberTwo,
                                                     HttpServletRequest httpServletRequest){
         try {
             if(!semaphoreRpmLimiter.allowRequest(httpServletRequest.getRemoteAddr())){
