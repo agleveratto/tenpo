@@ -9,14 +9,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.web.client.RestClientException;
 
 import java.util.HashMap;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.*;
-import static org.mockito.Mockito.times;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -59,7 +57,7 @@ class SumControllerTest {
 
         when(tenpoService.sum(1,2)).thenThrow(PercentageCachedNotFoundException.class);
 
-        MvcResult result = mockMvc.perform(get("/api/v1/tenpo/sum/{numberOne}/{numberTwo}", 1, 2))
+        var result = mockMvc.perform(get("/api/v1/tenpo/sum/{numberOne}/{numberTwo}", 1, 2))
                 .andExpect(status().isNotFound())
                 .andReturn();
 
@@ -71,13 +69,56 @@ class SumControllerTest {
     }
 
     @Test
+    public void sumNumbers_thenReturn429() throws Exception {
+        // Configuro el mock para permitir acceso con mi IP
+        when(semaphoreRpmLimiter.allowRequest("127.0.0.1")).thenReturn(true);
+
+        when(tenpoService.sum(4,5)).thenReturn(10.0);
+
+        // Hago 3 consultas al controlador, esperando tener status OK
+        for (int i = 0 ; i < 3 ; i++){
+            mockMvc.perform(get("/api/v1/tenpo/sum/{numberOne}/{numberTwo}", 4, 5)).andExpect(status().isOk());
+        }
+        // Configuro el mock para NO permitir acceso con mi IP
+        when(semaphoreRpmLimiter.allowRequest("127.0.0.1")).thenReturn(false);
+
+        // Hacer una consulta esperando tener status TOO MANY REQUESTS
+        var result = mockMvc.perform(get("/api/v1/tenpo/sum/{numberOne}/{numberTwo}", 4, 5)).andExpect(status().isTooManyRequests()).andReturn();
+
+        assertThat(result).isNotNull();
+        assertThat(result.getResponse()).isNotNull();
+        assertThat(result.getResponse().getContentAsString()).isEqualTo("Exceeded requests per minute");
+
+        // Verificar que se permitieron o denegaron las solicitudes según lo esperado
+        verify(semaphoreRpmLimiter, times(4)).allowRequest("127.0.0.1");
+        verify(tenpoService, times(3)).sum(4,5);
+    }
+
+    @Test
+    public void sumNumbers_whenFailsValidatingRequests_thenReturn500() throws Exception {
+        // Configuro el mock para permitir acceso con mi IP
+        when(semaphoreRpmLimiter.allowRequest("127.0.0.1")).thenThrow(InterruptedException.class);
+
+        var result = mockMvc.perform(get("/api/v1/tenpo/sum/{numberOne}/{numberTwo}", 1, 2))
+                .andExpect(status().isInternalServerError())
+                .andReturn();
+
+        assertThat(result).isNotNull();
+        assertThat(result.getResponse()).isNotNull();
+        assertThat(result.getResponse().getContentAsString()).isEqualTo("Fail trying to validate requests");
+
+        verify(semaphoreRpmLimiter).allowRequest("127.0.0.1");
+        verify(tenpoService, never()).sum(1,2);
+    }
+
+    @Test
     public void sumNumbers_thenReturn500() throws Exception {
         // Configuro el mock para permitir acceso con mi IP
         when(semaphoreRpmLimiter.allowRequest("127.0.0.1")).thenReturn(true);
 
         when(tenpoService.sum(1,2)).thenThrow(RestClientException.class);
 
-        MvcResult result = mockMvc.perform(get("/api/v1/tenpo/sum/{numberOne}/{numberTwo}", 1, 2))
+        var result = mockMvc.perform(get("/api/v1/tenpo/sum/{numberOne}/{numberTwo}", 1, 2))
                 .andExpect(status().isInternalServerError())
                 .andReturn();
 

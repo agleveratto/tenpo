@@ -48,14 +48,14 @@ public class SumController {
                             schema = @Schema(implementation = ResponseEntity.class))})
     })
     @GetMapping("/sum/{numberOne}/{numberTwo}")
-    public ResponseEntity<Double> sumWithPercentage(@PathVariable int numberOne, @PathVariable int numberTwo,
+    public ResponseEntity<Object> sumWithPercentage(@PathVariable int numberOne, @PathVariable int numberTwo,
                                                     HttpServletRequest httpServletRequest){
         try {
             if(!semaphoreRpmLimiter.allowRequest(httpServletRequest.getRemoteAddr())){
-                return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).body(null);
+                return new ResponseEntity<>("Exceeded requests per minute", HttpStatus.TOO_MANY_REQUESTS);
             }
         } catch (InterruptedException e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+            return new ResponseEntity<>("Fail trying to validate requests",HttpStatus.INTERNAL_SERVER_ERROR);
         }
         return new ResponseEntity<>(sumService.sum(numberOne, numberTwo), HttpStatus.OK);
     }
