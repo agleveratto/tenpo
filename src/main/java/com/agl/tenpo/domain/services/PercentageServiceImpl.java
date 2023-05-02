@@ -13,12 +13,13 @@ import org.springframework.stereotype.Service;
 @CacheConfig(cacheNames = "percentage")
 public class PercentageServiceImpl implements PercentageService {
     @Override
+
     @Cacheable
     public int retrievePercentage() {
         return (int) (Math.random()*100+1);
     }
 
-    @Scheduled(fixedRate = 1800000)
+    @Scheduled(fixedRate = 5000)
     @CacheEvict(allEntries = true)
     public void clearCache(){
         log.info("clearing cache");

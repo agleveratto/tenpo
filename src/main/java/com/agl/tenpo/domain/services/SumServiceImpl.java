@@ -3,20 +3,28 @@ package com.agl.tenpo.domain.services;
 import com.agl.tenpo.application.services.SumService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.retry.annotation.Recover;
+import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
+
+import java.util.concurrent.TimeUnit;
 
 @Slf4j
 @Service
 public class SumServiceImpl implements SumService {
 
+    private static final String PERCENTAGE_KEY = "percentage";
     private final RestTemplate restTemplate;
+    private final RedisTemplate<String, Integer> redisTemplate;
 
     @Value("${percentage.service.url}")
     private String PERCENTAGE_SERVICE_URL;
 
-    public SumServiceImpl(RestTemplate restTemplate) {
+    public SumServiceImpl(RestTemplate restTemplate, RedisTemplate<String, Integer> redisTemplate) {
         this.restTemplate = restTemplate;
+        this.redisTemplate = redisTemplate;
     }
 
     @Override
@@ -27,8 +35,22 @@ public class SumServiceImpl implements SumService {
         return sum + ((double) (percentage * sum) / 100);
     }
 
-    private Integer getExternalPercentage() {
+    @Retryable()
+    public Integer getExternalPercentage() {
         log.info("getting percentage from external service");
-        return restTemplate.getForObject(PERCENTAGE_SERVICE_URL, Integer.class);
+        Integer externalPercentage = restTemplate.getForObject(PERCENTAGE_SERVICE_URL, Integer.class);
+        redisTemplate.opsForValue().set(PERCENTAGE_KEY, externalPercentage);
+        redisTemplate.expire(PERCENTAGE_KEY, 1, TimeUnit.MINUTES);
+        return externalPercentage;
     }
+
+    @Recover
+    public Integer getCachedPercentage(){
+        Integer cachedPercentage = redisTemplate.opsForValue().get(PERCENTAGE_KEY);
+        if (cachedPercentage == null) {
+            //todo throw custom exception
+        }
+        return cachedPercentage;
+    }
+
 }

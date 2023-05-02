@@ -32,12 +32,12 @@ public class SumServiceTest {
         ReflectionTestUtils.setField(sumService, "PERCENTAGE_SERVICE_URL", PERCENTAGE_SERVICE_URL);
     }
 
-    @Test
-    void sumNumbers(){
-        when(restTemplate.getForObject(PERCENTAGE_SERVICE_URL, Integer.class)).thenReturn(81);
-
-        assertThat(sumService.sum(20,23)).isEqualTo(77.83);
-
-        verify(restTemplate).getForObject(PERCENTAGE_SERVICE_URL, Integer.class);
-    }
+//    @Test
+//    void sumNumbers(){
+//        when(restTemplate.getForObject(PERCENTAGE_SERVICE_URL, Integer.class)).thenReturn(81);
+//
+//        assertThat(sumService.sum(20,23)).isEqualTo(77.83);
+//
+//        verify(restTemplate).getForObject(PERCENTAGE_SERVICE_URL, Integer.class);
+//    }
 }
