@@ -17,4 +17,9 @@ public class PercentageServiceTest {
     void retrievePercentage(){
         assertThat(percentageService.retrievePercentage()).isNotNull().isNotNegative();
     }
+
+    @Test
+    void clearCache(){
+        percentageService.clearCache();
+    }
 }

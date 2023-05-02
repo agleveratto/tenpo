@@ -1,5 +1,6 @@
 package com.agl.tenpo.domain.services;
 
+import com.agl.tenpo.domain.exceptions.PercentageCachedNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -14,6 +15,7 @@ import org.springframework.web.client.RestTemplate;
 import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -61,6 +63,14 @@ public class SumServiceTest {
 
         assertThat(sumService.getCachedPercentage()).isEqualTo(1);
 
+        verify(redisTemplate,times(2)).opsForValue();
+    }
+
+    @Test
+    void getCachedPercentage_whenPercentageIsNotFoundIntoCache_thenThrowPercentageCachedNotFoundException(){
+        when(redisTemplate.opsForValue().get("percentage")).thenReturn(null);
+
+        assertThatThrownBy(() -> sumService.getCachedPercentage()).isInstanceOf(PercentageCachedNotFoundException.class);
         verify(redisTemplate,times(2)).opsForValue();
     }
 }

@@ -2,6 +2,7 @@ package com.agl.tenpo.domain.services;
 
 import com.agl.tenpo.application.services.SumService;
 import com.agl.tenpo.domain.entities.HistoryApi;
+import com.agl.tenpo.domain.exceptions.PercentageCachedNotFoundException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -60,7 +61,7 @@ public class SumServiceImpl implements SumService {
     public Integer getCachedPercentage(){
         Integer cachedPercentage = redisTemplate.opsForValue().get(PERCENTAGE_KEY);
         if (cachedPercentage == null) {
-            //todo throw custom exception
+            throw new PercentageCachedNotFoundException();
         }
         return cachedPercentage;
     }
