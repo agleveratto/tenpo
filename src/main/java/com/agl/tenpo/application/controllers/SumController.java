@@ -18,8 +18,8 @@ public class SumController {
         this.sumService = sumService;
     }
 
-    @GetMapping("/sum/{num1}/{num2}")
-    public ResponseEntity<Object> sumWithPercentage(@PathVariable int num1, @PathVariable int num2) {
-        return new ResponseEntity<>(sumService.sum(num1, num2), HttpStatus.OK);
+    @GetMapping("/sum/{numberOne}/{numberTwo}")
+    public ResponseEntity<Object> sumWithPercentage(@PathVariable int numberOne, @PathVariable int numberTwo) {
+        return new ResponseEntity<>(sumService.sum(numberOne, numberTwo), HttpStatus.OK);
     }
 }

@@ -1,14 +1,20 @@
 package com.agl.tenpo.domain.services;
 
 import com.agl.tenpo.application.services.SumService;
+import com.agl.tenpo.domain.entities.HistoryApi;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.http.HttpStatus;
 import org.springframework.retry.annotation.Recover;
 import org.springframework.retry.annotation.Retryable;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
 import java.util.concurrent.TimeUnit;
 
 @Slf4j
@@ -22,17 +28,23 @@ public class SumServiceImpl implements SumService {
     @Value("${percentage.service.url}")
     private String PERCENTAGE_SERVICE_URL;
 
+    @Value("${history.service.url}")
+    private String HISTORY_SERVICE_URL;
+
     public SumServiceImpl(RestTemplate restTemplate, RedisTemplate<String, Integer> redisTemplate) {
         this.restTemplate = restTemplate;
         this.redisTemplate = redisTemplate;
     }
 
     @Override
-    public double sum(int num1, int num2) {
+    public double sum(int numberOne, int numberTwo) {
+        String localDateTime = LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS).format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
         int percentage = getExternalPercentage();
         log.info("percentage getted {}", percentage);
-        int sum = num1 + num2;
-        return sum + ((double) (percentage * sum) / 100);
+        int sum = numberOne + numberTwo;
+        double result = sum + ((double) (percentage * sum) / 100);
+        saveData(localDateTime, percentage, numberOne, numberTwo, result);
+        return result;
     }
 
     @Retryable()
@@ -51,6 +63,20 @@ public class SumServiceImpl implements SumService {
             //todo throw custom exception
         }
         return cachedPercentage;
+    }
+
+    @Async
+    void saveData(String localDateTime, int percentage, int numberOne, int numberTwo, Double result){
+        log.info("save data into historyApi");
+        HistoryApi historyApi = HistoryApi.builder()
+                .executedDate(localDateTime)
+                .num1(numberOne)
+                .num2(numberTwo)
+                .percentage(percentage)
+                .result(result)
+                .statusCode(HttpStatus.CREATED.value())
+                .build();
+        new RestTemplate().postForEntity(HISTORY_SERVICE_URL, historyApi, HistoryApi.class);
     }
 
 }
