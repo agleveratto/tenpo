@@ -11,6 +11,7 @@ import org.springframework.retry.annotation.Recover;
 import org.springframework.retry.annotation.Retryable;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
 import java.time.LocalDateTime;
@@ -77,7 +78,11 @@ public class SumServiceImpl implements SumService {
                 .result(result)
                 .statusCode(HttpStatus.CREATED.value())
                 .build();
-        restTemplate.postForEntity(HISTORY_SERVICE_URL, historyApi, HistoryApi.class);
+        try {
+            restTemplate.postForEntity(HISTORY_SERVICE_URL, historyApi, HistoryApi.class);
+        } catch (RestClientException e) {
+            log.info("error saving history object.");
+        }
     }
 
 }

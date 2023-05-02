@@ -13,6 +13,7 @@ import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
 import java.time.LocalDateTime;
@@ -71,7 +72,8 @@ public class SumServiceTest {
 
         verify(restTemplate).getForObject(PERCENTAGE_SERVICE_URL, Integer.class);
         verify(redisTemplate).opsForValue();
-        verify(redisTemplate).expire("percentage", 1, TimeUnit.MINUTES);
+        verify(redisTemplate).expire("percentage", 30, TimeUnit.MINUTES);
+        verify(restTemplate).postForEntity(HISTORY_SERVICE_URL, historyApi, HistoryApi.class);
     }
 
     @Test
@@ -89,5 +91,27 @@ public class SumServiceTest {
 
         assertThatThrownBy(() -> sumService.getCachedPercentage()).isInstanceOf(PercentageCachedNotFoundException.class);
         verify(redisTemplate,times(2)).opsForValue();
+    }
+
+    @Test
+    void saveData_fails(){
+        HistoryApi historyApi = HistoryApi.builder()
+                .executedDate(LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS).format(DateTimeFormatter.ISO_LOCAL_DATE_TIME))
+                .num1(20)
+                .num2(23)
+                .percentage(81)
+                .result(77.83)
+                .statusCode(HttpStatus.CREATED.value())
+                .build();
+
+        when(restTemplate.postForEntity(HISTORY_SERVICE_URL, historyApi, HistoryApi.class)).thenThrow(RestClientException.class);
+        when(restTemplate.getForObject(PERCENTAGE_SERVICE_URL, Integer.class)).thenReturn(81);
+
+        assertThat(sumService.sum(20,23)).isEqualTo(77.83);
+
+        verify(restTemplate).getForObject(PERCENTAGE_SERVICE_URL, Integer.class);
+        verify(redisTemplate).opsForValue();
+        verify(redisTemplate).expire("percentage", 30, TimeUnit.MINUTES);
+        verify(restTemplate).postForEntity(HISTORY_SERVICE_URL, historyApi, HistoryApi.class);
     }
 }
